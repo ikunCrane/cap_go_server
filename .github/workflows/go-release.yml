@@ -1,0 +1,54 @@
+name: Go Module Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  go-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.21'
+
+      - name: Verify Go module
+        run: |
+          go mod verify
+          go mod tidy
+          
+      - name: Run tests
+        run: go test -v ./...
+
+      - name: Run go mod download
+        run: go mod download
+
+      - name: Check if tag matches version
+        run: |
+          TAG_VERSION=${GITHUB_REF#refs/tags/}
+          echo "Tag version: $TAG_VERSION"
+          
+          # Validate tag format (should be vX.Y.Z)
+          if [[ ! $TAG_VERSION =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Error: Tag $TAG_VERSION does not match semantic versioning format (vX.Y.Z)"
+            exit 1
+          fi
+          
+          echo "Tag format is valid"
+
+      - name: Create Go proxy cache
+        run: |
+          # This helps ensure the module is available via Go proxy
+          GOPROXY=https://proxy.golang.org go list -m github.com/samwafgo/cap_go_server@${{ github.ref_name }} || true
+
+      - name: Notify completion
+        run: |
+          echo "Go module release completed for ${{ github.ref_name }}"
+          echo "Module should be available at: go get github.com/samwafgo/cap_go_server@${{ github.ref_name }}"
