@@ -4,6 +4,8 @@ A Go implementation of Cap - a lightweight, modern open-source CAPTCHA alternati
 
 ## Overview
 
+![Cap Challenge Example](static/capture.png)
+
 Cap Go Server is a Go port of the original JavaScript Cap server library. It provides server-side challenge generation and verification for Cap, a proof-of-work based CAPTCHA alternative that eliminates the need for tracking, fingerprinting, or data collection.
 
 ## Features
@@ -62,157 +64,14 @@ func main() {
 
 ### HTTP Server Example
 
-Here's a complete HTTP server implementation demonstrating all Cap methods:
+1. **Start the server**:
+   ```bash
+   cd example/http_server
+   go run main.go
+   ```
 
-```go
-package main
-
-import (
-    "encoding/json"
-    "fmt"
-    "log"
-    "net/http"
-    "github.com/samwafgo/cap_go_server"
-)
-
-func main() {
-    // Initialize Cap server
-    config := &capserver.CapConfig{
-        TokensStorePath: "./example_tokens.json",
-        NoFSState:       false,
-    }
-    capServer := capserver.New(config)
-
-    // Set up HTTP routes
-    http.HandleFunc("/challenge", handleChallenge(capServer))
-    http.HandleFunc("/redeem", handleVerify(capServer))
-    http.HandleFunc("/validate", handleValidate(capServer))
-
-    log.Printf("Starting server on http://localhost:8080")
-    log.Fatal(http.ListenAndServe(":8080", nil))
-}
-
-// POST /challenge - Create a new challenge
-func handleChallenge(capServer *capserver.Cap) http.HandlerFunc {
-    return func(w http.ResponseWriter, r *http.Request) {
-        if r.Method != http.MethodPost {
-            http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-            return
-        }
-
-        w.Header().Set("Content-Type", "application/json")
-
-        config := &capserver.ChallengeConfig{
-            ChallengeCount:      50,
-            ChallengeSize:       32,
-            ChallengeDifficulty: 4,
-            ExpiresMs:           300000, // 5 minutes
-            Store:               true,
-        }
-
-        challenge, err := capServer.CreateChallenge(config)
-        if err != nil {
-            http.Error(w, fmt.Sprintf("Failed to create challenge: %v", err), http.StatusInternalServerError)
-            return
-        }
-
-        json.NewEncoder(w).Encode(challenge)
-    }
-}
-
-// POST /redeem - Submit solution and get verification token
-func handleVerify(capServer *capserver.Cap) http.HandlerFunc {
-    return func(w http.ResponseWriter, r *http.Request) {
-        if r.Method != http.MethodPost {
-            http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-            return
-        }
-
-        w.Header().Set("Content-Type", "application/json")
-
-        var req struct {
-            Token     string          `json:"token"`
-            Solutions [][]interface{} `json:"solutions"` // Array of [salt, target, solution] tuples
-        }
-
-        if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-            http.Error(w, "Invalid JSON", http.StatusBadRequest)
-            return
-        }
-
-        if req.Token == "" {
-            http.Error(w, "Token is required", http.StatusBadRequest)
-            return
-        }
-
-        if len(req.Solutions) == 0 {
-            http.Error(w, "Solutions are required", http.StatusBadRequest)
-            return
-        }
-
-        solution := &capserver.Solution{
-            Token:     req.Token,
-            Solutions: req.Solutions,
-        }
-
-        result, err := capServer.RedeemChallenge(solution)
-        if err != nil {
-            http.Error(w, fmt.Sprintf("Failed to redeem challenge: %v", err), http.StatusInternalServerError)
-            return
-        }
-
-        response := map[string]interface{}{
-            "success": result.Success,
-        }
-
-        if result.Success && result.Token != "" {
-            response["token"] = result.Token
-        }
-        if result.Success && result.Expires > 0 {
-            response["expires"] = result.Expires
-        }
-
-        json.NewEncoder(w).Encode(response)
-    }
-}
-
-// POST /validate - Validate a verification token
-func handleValidate(capServer *capserver.Cap) http.HandlerFunc {
-    return func(w http.ResponseWriter, r *http.Request) {
-        if r.Method != http.MethodPost {
-            http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-            return
-        }
-
-        w.Header().Set("Content-Type", "application/json")
-
-        var req struct {
-            Token string `json:"token"`
-        }
-
-        if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-            http.Error(w, "Invalid JSON", http.StatusBadRequest)
-            return
-        }
-
-        if req.Token == "" {
-            http.Error(w, "Token is required", http.StatusBadRequest)
-            return
-        }
-
-        result, err := capServer.ValidateToken(req.Token, nil)
-        if err != nil {
-            http.Error(w, fmt.Sprintf("Failed to validate token: %v", err), http.StatusInternalServerError)
-            return
-        }
-
-        json.NewEncoder(w).Encode(map[string]interface{}{
-            "success": result.Success,
-            "message": "Token validation completed",
-        })
-    }
-}
-```
+2. **Open your browser**:
+   Navigate to `http://localhost:8080`
 
 #### API Endpoints
 
