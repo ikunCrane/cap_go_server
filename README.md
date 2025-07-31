@@ -3,10 +3,12 @@
 A Go implementation of Cap - a lightweight, modern open-source CAPTCHA alternative using SHA-256 proof-of-work.
 
 ## Overview
-
-![Cap Challenge Example](static/capture.png)
+ 
+![Cap Challenge Example](static/demo.gif)
 
 Cap Go Server is a Go port of the original JavaScript Cap server library. It provides server-side challenge generation and verification for Cap, a proof-of-work based CAPTCHA alternative that eliminates the need for tracking, fingerprinting, or data collection.
+
+
 
 ## Features
 
